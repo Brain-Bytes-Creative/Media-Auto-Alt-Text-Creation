@@ -22,6 +22,15 @@ function maatc_render_csv_import_section() {
 	}
 	?>
 	<hr>
+	<h2><?php esc_html_e( 'Export media library images', 'media-auto-alt-text-creation' ); ?></h2>
+	<p><?php esc_html_e( 'Download a CSV of every image in the Media Library with its URL, title and alt text. You can edit the Alt Text column and upload the file below to apply your changes.', 'media-auto-alt-text-creation' ); ?></p>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<input type="hidden" name="action" value="maatc_csv_export">
+		<?php wp_nonce_field( 'maatc_csv_export' ); ?>
+		<?php submit_button( __( 'Export images to CSV', 'media-auto-alt-text-creation' ), 'secondary', 'submit', false ); ?>
+	</form>
+
+	<hr>
 	<h2><?php esc_html_e( 'Bulk update alt text from a CSV', 'media-auto-alt-text-creation' ); ?></h2>
 	<p>
 		<?php esc_html_e( 'Upload a CSV with one column of image URLs and one column of new alt text, with a header row such as "Address,New Alt Text".', 'media-auto-alt-text-creation' ); ?>
@@ -225,6 +234,61 @@ add_action( 'admin_post_maatc_csv_confirm', function () {
 			'rows'    => $rows,
 		)
 	);
+} );
+
+// Download every image in the Media Library as a CSV that the import can read back.
+add_action( 'admin_post_maatc_csv_export', function () {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You are not allowed to do this.', 'media-auto-alt-text-creation' ), 403 );
+	}
+	check_admin_referer( 'maatc_csv_export' );
+
+	$filename = sanitize_file_name( 'media-alt-text-' . wp_parse_url( home_url(), PHP_URL_HOST ) . '-' . gmdate( 'Y-m-d' ) . '.csv' );
+
+	nocache_headers();
+	header( 'Content-Type: text/csv; charset=utf-8' );
+	header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+
+	$out = fopen( 'php://output', 'w' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
+	fwrite( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- BOM so Excel reads UTF-8.
+	fputcsv( $out, array( 'ID', 'Address', 'Title', 'Alt Text' ), ',', '"', '\\' );
+
+	$page = 1;
+	do {
+		$ids = get_posts(
+			array(
+				'post_type'      => 'attachment',
+				'post_mime_type' => 'image',
+				'post_status'    => 'inherit',
+				'posts_per_page' => 500,
+				'paged'          => $page,
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+			)
+		);
+		update_meta_cache( 'post', $ids );
+
+		foreach ( $ids as $id ) {
+			fputcsv(
+				$out,
+				array(
+					$id,
+					wp_get_attachment_url( $id ),
+					get_post_field( 'post_title', $id, 'raw' ),
+					(string) get_post_meta( $id, '_wp_attachment_image_alt', true ),
+				),
+				',',
+				'"',
+				'\\'
+			);
+		}
+		$page++;
+	} while ( count( $ids ) === 500 );
+
+	fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+	exit;
 } );
 
 /**
