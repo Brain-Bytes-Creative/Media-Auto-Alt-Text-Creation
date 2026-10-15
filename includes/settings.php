@@ -198,6 +198,8 @@ function maatc_render_settings_page() {
 
 			<?php submit_button(); ?>
 		</form>
+
+		<?php maatc_render_csv_import_section(); ?>
 	</div>
 	<?php
 }

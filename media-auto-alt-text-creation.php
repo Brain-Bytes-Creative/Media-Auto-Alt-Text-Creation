@@ -25,6 +25,7 @@ define( 'MAATC_SETTINGS_PAGE', 'media-auto-alt-text-creation' );
 require_once MAATC_DIR . 'includes/settings.php';
 require_once MAATC_DIR . 'includes/generator.php';
 require_once MAATC_DIR . 'includes/admin.php';
+require_once MAATC_DIR . 'includes/csv-import.php';
 
 // Add a Settings link on the Plugins screen.
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), function ( $links ) {

@@ -20,6 +20,7 @@ For example, `summer_beach-sunset-1024x768.jpg` becomes "Summer beach sunset".
 * Optionally rename uploaded files to clean, lowercase, hyphenated names (images only, all uploads, or off).
 * Regenerate existing images with a button in the media modal or on the image edit screen, from the Alt text column in the Media Library list view, or with the "Generate title & alt text" bulk action.
 * Choose whether regenerating overwrites existing values or only fills empty fields.
+* Bulk update alt text by uploading a CSV of image URLs and new alt text on the settings page. The domain is ignored, so a CSV made on a staging site works on the live site. Preview mode shows the changes without saving.
 
 Settings are under Settings > Media Alt Text.
 
