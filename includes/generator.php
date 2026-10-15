@@ -10,13 +10,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Convert a file name into readable text.
  *
- * "my_photo-of-the-BEACH-1024x768-scaled.jpg" becomes "My Photo Of The Beach" with title case.
+ * "my_photo-of-the-BEACH-1024x768-scaled.jpg" becomes "My photo of the beach" with sentence case.
  *
  * @param string $filename       File name or path, with or without extension.
  * @param string $capitalization One of the keys from maatc_capitalization_styles().
  * @return string
  */
-function maatc_text_from_filename( $filename, $capitalization = 'title' ) {
+function maatc_text_from_filename( $filename, $capitalization = 'sentence' ) {
 	$text = pathinfo( $filename, PATHINFO_FILENAME );
 
 	// Drop suffixes WordPress or editors add: "-scaled", "-rotated", "-e1712345678", "-1024x768".

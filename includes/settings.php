@@ -28,8 +28,8 @@ function maatc_available_fields() {
  */
 function maatc_capitalization_styles() {
 	return array(
-		'title'    => __( 'Title Case (default)', 'media-auto-alt-text-creation' ),
-		'sentence' => __( 'Sentence case', 'media-auto-alt-text-creation' ),
+		'title'    => __( 'Title Case', 'media-auto-alt-text-creation' ),
+		'sentence' => __( 'Sentence case (default)', 'media-auto-alt-text-creation' ),
 		'lower'    => __( 'lowercase', 'media-auto-alt-text-creation' ),
 		'upper'    => __( 'UPPERCASE', 'media-auto-alt-text-creation' ),
 		'none'     => __( 'Leave as is', 'media-auto-alt-text-creation' ),
@@ -57,7 +57,7 @@ function maatc_rename_modes() {
 function maatc_default_settings() {
 	return array(
 		'fields'         => array( 'post_title', 'alt_text' ),
-		'capitalization' => 'title',
+		'capitalization' => 'sentence',
 		'rename_files'   => 'images',
 		'overwrite'      => true,
 	);
