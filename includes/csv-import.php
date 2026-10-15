@@ -122,6 +122,47 @@ function maatc_render_csv_results( $results ) {
 		</tbody>
 	</table>
 	<?php
+
+	if ( $results['dry_run'] && $counts['updated'] && false !== get_transient( maatc_csv_pending_key() ) ) :
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:1em">
+			<input type="hidden" name="action" value="maatc_csv_confirm">
+			<?php wp_nonce_field( 'maatc_csv_confirm' ); ?>
+			<?php
+			submit_button(
+				sprintf(
+					/* translators: %d: number of images. */
+					_n( 'Confirm and update %d image', 'Confirm and update %d images', $counts['updated'], 'media-auto-alt-text-creation' ),
+					$counts['updated']
+				),
+				'primary',
+				'submit',
+				false
+			);
+			?>
+		</form>
+		<?php
+	endif;
+}
+
+/**
+ * Transient key for the rows of the current user's last preview, waiting for confirmation.
+ *
+ * @return string
+ */
+function maatc_csv_pending_key() {
+	return 'maatc_csv_pending_' . get_current_user_id();
+}
+
+/**
+ * Save the results and return to the settings page.
+ *
+ * @param array $results Import results.
+ */
+function maatc_csv_redirect_with_results( $results ) {
+	set_transient( 'maatc_csv_results_' . get_current_user_id(), $results, 10 * MINUTE_IN_SECONDS );
+	wp_safe_redirect( admin_url( 'options-general.php?page=' . MAATC_SETTINGS_PAGE ) );
+	exit;
 }
 
 // Handle the upload, then redirect back to the settings page with the results.
@@ -140,9 +181,50 @@ add_action( 'admin_post_maatc_csv_import', function () {
 		$results = maatc_import_alt_text_csv( $upload['tmp_name'], $dry_run );
 	}
 
-	set_transient( 'maatc_csv_results_' . get_current_user_id(), $results, 10 * MINUTE_IN_SECONDS );
-	wp_safe_redirect( admin_url( 'options-general.php?page=' . MAATC_SETTINGS_PAGE ) );
-	exit;
+	// Keep a preview's rows so it can be confirmed without uploading the CSV again.
+	if ( $dry_run && ! empty( $results['rows'] ) ) {
+		$pending = array();
+		foreach ( $results['rows'] as $row ) {
+			$pending[] = array(
+				'line' => $row['line'],
+				'url'  => $row['url'],
+				'alt'  => $row['alt'],
+			);
+		}
+		set_transient( maatc_csv_pending_key(), $pending, HOUR_IN_SECONDS );
+	} else {
+		delete_transient( maatc_csv_pending_key() );
+	}
+
+	maatc_csv_redirect_with_results( $results );
+} );
+
+// Apply the last preview for real.
+add_action( 'admin_post_maatc_csv_confirm', function () {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You are not allowed to do this.', 'media-auto-alt-text-creation' ), 403 );
+	}
+	check_admin_referer( 'maatc_csv_confirm' );
+
+	$pending = get_transient( maatc_csv_pending_key() );
+	delete_transient( maatc_csv_pending_key() );
+
+	if ( ! is_array( $pending ) ) {
+		maatc_csv_redirect_with_results( array( 'error' => __( 'That preview has expired. Please upload the CSV again.', 'media-auto-alt-text-creation' ) ) );
+	}
+
+	// Images are matched again, so the update reflects the Media Library as it is now.
+	$rows = array();
+	foreach ( $pending as $row ) {
+		$rows[] = maatc_import_csv_row( array( $row['url'], $row['alt'] ), 0, 1, $row['line'], false );
+	}
+
+	maatc_csv_redirect_with_results(
+		array(
+			'dry_run' => false,
+			'rows'    => $rows,
+		)
+	);
 } );
 
 /**
